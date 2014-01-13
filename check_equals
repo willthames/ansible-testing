@@ -1,0 +1,66 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2014, Will Thames <will@thames.id.au>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+
+DOCUMENTATION = '''
+---
+module: check_equals
+version_added: 1.5
+short_description: Compare two values for equality
+description:
+  - Compare two values for equality
+options: 
+  left: 
+    description:
+    - a value to compare
+    required: True
+    default: null
+  right:
+    description:
+    - the other value to compare
+    required: True
+    default: null
+author: Will Thames
+'''
+
+EXAMPLES = '''
+# Check if number of cpus is 2
+check_equals: left="{{ansible_processor_count}}" right=2
+'''
+
+def main():
+    module = AnsibleModule(
+        argument_spec = dict(
+            left=dict(type='str', required=True, default=None),
+            right=dict(type='str', required=True, default=None),
+        )
+    )
+    left = module.params.get('left')
+    right = module.params.get('right')
+
+    if left == right: 
+        module.exit_json()
+    else:
+        module.fail_json(msg="Values %s and %s do not match" % (left, right))
+
+from ansible.module_utils.basic import *
+
+main()
+

@@ -25,11 +25,18 @@ git submodule add http://github.com/willthames/ansible-testing library/testing
 
 # Implemented
 ```
-name: http is running
-action: check_process state=running name=http
+name: python is running app.py
+check_process:
+  state: present
+  name: python
+  args: 
+  - app.py
 
 name: port 80 appears open from playbook machine
 local_action: check_tcp state=open port=80
+
+name: number of cpus is 2
+action: check_equals left={{ansible_processor_count}} right=2
 ```
 
 # To be implemented
@@ -45,7 +52,4 @@ action: check_file state=file name=/usr/local/etc/example
 
 name: /usr/local/bin/bobbins outputs 'hello' and exits with status 0
 action: check_command name=/usr/local/bin/bobbins status=0 stdout='hello'
-
-name: number of cpus is 2
-action: check_equals left={{ansible_processor_count}} right=2
 ```
