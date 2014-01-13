@@ -21,7 +21,7 @@
 
 DOCUMENTATION = '''
 ---
-module: check_tcp
+module: test_tcp
 version_added: 1.5
 short_description: Check if a tcp connection can be made
 description:
@@ -52,7 +52,7 @@ author: Will Thames
 
 EXAMPLES = '''
 # Check if port 80 is open on a server
-check_tcp: port=80 state=open timeout=10
+test_tcp: port=80 state=open timeout=10
 '''
 import socket
 
@@ -62,14 +62,14 @@ def main():
             host=dict(required=True, default=None),
             port=dict(required=True, default=None),
             state=dict(choices=['open', 'closed'], default='open'),
-            timeout=dict(required=False, default=5),
-        )
+            timeout=dict(required=False, default=5.0, type='float'),
+        ),
+        supports_check_mode=True
     )
     host = module.params.get('host')
     port = module.params.get('port')
     state = module.params.get('state')
-    # Once Ansible #5594 is accepted we can move the cast to the argument_spec
-    timeout = float(module.params.get('timeout'))
+    timeout = module.params.get('timeout')
     
     s = None
     for res in socket.getaddrinfo(module.params.get('host'), module.params.get('port'),

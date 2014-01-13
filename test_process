@@ -21,7 +21,7 @@
 
 DOCUMENTATION = '''
 ---
-module: check_process
+module: test_process
 version_added: 1.5
 short_description: Check the status of a process
 description:
@@ -47,7 +47,7 @@ author: Will Thames
 
 EXAMPLES = '''
 # Check if python app is running
-check_process: name=python state=present args=['app.py']
+test_process: name=python state=present args=['app.py']
 '''
 
 def check_process_for_arg(process, arg): 
@@ -71,7 +71,8 @@ def main():
             name=dict(required=True, default=None),
             args=dict(type='list', required=False, default=[]),
             state=dict(choices=['present', 'absent'], default='present'),
-        )
+        ),
+        supports_check_mode=True
     )
     name = module.params.get('name')
     args = module.params.get('args')

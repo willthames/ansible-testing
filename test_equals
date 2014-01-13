@@ -21,7 +21,7 @@
 
 DOCUMENTATION = '''
 ---
-module: check_equals
+module: test_equals
 version_added: 1.5
 short_description: Compare two values for equality
 description:
@@ -42,7 +42,7 @@ author: Will Thames
 
 EXAMPLES = '''
 # Check if number of cpus is 2
-check_equals: left="{{ansible_processor_count}}" right=2
+test_equals: left="{{ansible_processor_count}}" right=2
 '''
 
 def main():
@@ -50,7 +50,8 @@ def main():
         argument_spec = dict(
             left=dict(type='str', required=True, default=None),
             right=dict(type='str', required=True, default=None),
-        )
+        ),
+        supports_check_mode=True
     )
     left = module.params.get('left')
     right = module.params.get('right')

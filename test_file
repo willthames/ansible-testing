@@ -23,7 +23,7 @@ import grp
 
 DOCUMENTATION = '''
 ---
-module: check_file
+module: test_file
 version_added: 1.5
 short_description: Check file and directory permissions
 description:
@@ -68,7 +68,7 @@ author: Allan Denot
 
 EXAMPLES = '''
 # Check if python app is running
-check_file: path=/etc/tmpfile mode=0755 owner=adenot group=users
+test_file: path=/etc/tmpfile mode=0755 owner=adenot group=users
 '''
 
 def file_stat(filename):
@@ -90,7 +90,8 @@ def main():
             group=dict(required=False),
             src=dict(required=False),
             state=dict(choices=['file','directory','absent','hard','link'], default='file'),
-        )
+        ),
+        supports_check_mode=True
     )
     state = module.params['state']
     mode = module.params.get('mode')
