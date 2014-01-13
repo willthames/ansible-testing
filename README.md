@@ -38,4 +38,7 @@ local_action: check_tcp state=open port=80
 
 name: connecting to http://example.com/healthcheck returns 'Healthy' and status 200
 local_action: check_http url=http://example.com/healthcheck status=200 message='.*Healthy.*'
+
+name: checking directory mode and permissions
+local_action: check_file path=/tmp/testdir mode=0755 owner=u342145 group=actuser state=directory
 ```
