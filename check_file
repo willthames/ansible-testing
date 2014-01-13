@@ -1,0 +1,210 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2014, Allan Denot <adenot@gmail.com>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+from pprint import pprint
+import grp
+
+DOCUMENTATION = '''
+---
+module: check_file
+version_added: 1.5
+short_description: Check file and directory permissions
+description:
+  - Check permissions such as mode, owner and group of file or directory
+options: 
+  path: 
+    description:
+    - path to the file or directory to check its permissions
+    required: True
+    default: null
+  mode:
+    description:
+    - expected mode of the file/directory
+    required: False
+    default: null
+  owner: 
+    description: 
+    - expected owner of the file/directory
+    required: False
+    default: null
+  group: 
+    description: 
+    - expected group of the file/directory
+    required: False
+    default: null
+  state:
+    description:
+    - Check for the state of the resource. Options are: C(directory), C(file), C(absent)
+    required: false
+    default: file
+    choices: [ file, directory, absent, hard, link ]
+  src:
+    required: false
+    default: null
+    choices: []
+    description:
+      - path of the file to link to (applies only to C(state=link)). Will accept absolute,
+        relative and nonexisting paths. Relative paths are not expanded.
+
+author: Allan Denot
+'''
+
+EXAMPLES = '''
+# Check if python app is running
+check_file: path=/etc/tmpfile mode=0755 owner=adenot group=users
+'''
+
+def file_stat(filename):
+    filename = os.path.expanduser(filename)
+    st = os.lstat(filename)
+    group = grp.getgrgid(st.st_gid).gr_name
+    user = pwd.getpwuid(st.st_uid).pw_name
+
+    mode = oct(st.st_mode & 0777)
+
+    return { 'group': group, 'user': user, 'mode': mode }
+
+def main():
+    module = AnsibleModule(
+        argument_spec = dict(
+            path=dict(required=True, default=None),
+            mode=dict(required=False),
+            owner=dict(required=False),
+            group=dict(required=False),
+            state=dict(choices=['file','directory','absent','hard','link'], default='file'),
+        ),
+        add_file_common_args=True,
+        supports_check_mode=False
+    )
+    params = module.params
+    state = params['state']
+    params['path'] = path = os.path.expanduser(params['path'])
+
+    module.check_mode = True
+
+    prev_state = 'absent'
+
+    if os.path.lexists(path):
+        if os.path.islink(path):
+            prev_state = 'link'
+        elif os.path.isdir(path):
+            prev_state = 'directory'
+        elif os.stat(path).st_nlink > 1:
+            prev_state = 'hard'
+        else:
+            # could be many other things, but defaulting to file
+            prev_state = 'file'
+
+
+    if prev_state is not None and state is None:
+        # set state to current type of file
+        state = prev_state
+    elif state is None:
+        # set default state to file
+        state = 'file'
+
+    # source is both the source of a symlink or an informational passing of the src for a template module
+    # or copy module, even if this module never uses it, it is needed to key off some things
+
+    src = params.get('src', None)
+    if src:
+        src = os.path.expanduser(src)
+
+    if src is not None and os.path.isdir(path) and state not in ["link", "absent"]:
+        if params['original_basename']:
+            basename = params['original_basename']
+        else:
+            basename = os.path.basename(src)
+        params['path'] = path = os.path.join(path, basename)
+
+    file_args = module.load_file_common_arguments(params)
+
+    if state in ['link','hard'] and (src is None or path is None):
+        module.fail_json(msg='src and dest are required for checking links')
+    elif path is None:
+        module.fail_json(msg='path is required')
+
+    changed = False
+
+    if prev_state != 'absent' and state == 'absent':
+        module.fail_json(msg='file or diretory is not absent')
+
+    if prev_state == 'absent' and state == 'absent':
+        module.exit_json(path=path, changed=False)
+
+    file_attrs = file_stat(params['path'])
+
+    if state == 'file':
+        if prev_state != 'file':
+            module.fail_json(path=path, msg='file (%s) does not exist, use copy or template module to create' % path)
+
+        changed = module.set_file_attributes_if_different(file_args, changed)
+        if changed:
+            module.fail_json(msg='file attributes are different', actual_attrs=file_attrs, expected_attrs=file_args)
+        else:
+            module.exit_json(path=path, changed=False)
+
+    elif state == 'directory':
+        if prev_state == 'absent':
+            module.exit_json(changed=True)
+
+        changed = module.set_directory_attributes_if_different(file_args, changed)
+        if changed:
+            module.fail_json(msg='directory attributes are different', actual_attrs=file_attrs, expected_attrs=file_args)
+        else:
+            module.exit_json(path=path, changed=False)
+
+    elif state in ['link','hard']:
+        if state == 'hard':
+            if os.path.isabs(src):
+                abs_src = src
+            else:
+                module.fail_json(msg="absolute paths are required")
+
+            if not os.path.exists(abs_src) and not force:
+                module.fail_json(path=path, src=src, msg='src file does not exist')
+
+        if prev_state == 'absent':
+            changed = True
+            msg = 'link is absent'
+        elif prev_state == 'link':
+            old_src = os.path.join(os.path.dirname(path), os.path.basename(os.readlink(path)))
+            if old_src != src:
+                changed = True
+                msg = 'link source (target file) is different from actual'
+        elif prev_state == 'hard':
+            changed = True
+            msg = 'link is actually a hard link'
+        elif prev_state == 'file':
+            if not force:
+                module.fail_json(dest=path, src=src, msg='Cannot link, file exists at destination')
+            changed = True
+            msg = 'link is actually a file'
+        else:
+            module.fail_json(dest=path, src=src, msg='unexpected position reached')
+
+        if changed:
+            module.fail_json(msg=msg, actual_attrs=file_attrs, expected_attrs=file_args, actual_src=old_src, expected_src=src)
+        else:
+            module.exit_json(path=path, changed=False)
+
+from ansible.module_utils.basic import *
+main()
+

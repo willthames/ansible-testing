@@ -37,6 +37,10 @@ local_action: check_tcp state=open port=80
 
 name: number of cpus is 2
 action: check_equals left={{ansible_processor_count}} right=2
+
+name: /usr/local/etc/example exists
+action: check_file state=file path=/usr/local/etc/example mode=0755 owner=testuser group=testgroup
+
 ```
 
 # To be implemented
@@ -46,9 +50,6 @@ action: check_rpm state=present name=http
 
 name: connecting to http://example.com/healthcheck returns 'Healthy' and status 200
 local_action: check_http url=http://example.com/healthcheck status=200 message='.*Healthy.*'
-
-name: /usr/local/etc/example exists
-action: check_file state=file name=/usr/local/etc/example
 
 name: /usr/local/bin/bobbins outputs 'hello' and exits with status 0
 action: check_command name=/usr/local/bin/bobbins status=0 stdout='hello'
