@@ -4,14 +4,14 @@ ansible-testing
 ansible-testing is designed to be a set of modules for Ansible to allow 
 infrastructure testing. 
 
-Hopefully these modules will be absorbed into (Ansible)[http://github.com/ansible/ansible]
+Hopefully these modules will be absorbed into [Ansible](http://github.com/ansible/ansible)
 if the concept proves itself
 
 ## Installation
 
 ```
-cd ~/src/ansible/library
-git clone http://github.com/willthames/ansible-testing testing
+cd ~/src/ansible
+git submodule add http://github.com/willthames/ansible-testing library/testing
 ```
 
 ## Usage
