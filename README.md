@@ -24,7 +24,7 @@ git submodule add http://github.com/willthames/ansible-testing library/testing
 ```
 
 Note that this is README-Driven development - some or all of the following may not be 
-implemented (currently only check_tcp is implemented!)
+implemented (currently only check_tcp and check_process are implemented)
 
 ```
 name: http is installed
