@@ -23,19 +23,29 @@ git submodule add http://github.com/willthames/ansible-testing library/testing
   - webserver
 ```
 
-Note that this is README-Driven development - some or all of the following may not be 
-implemented (currently only check_tcp and check_process are implemented)
-
+# Implemented
 ```
-name: http is installed
-action: check_rpm state=present name=http
-
 name: http is running
 action: check_process state=running name=http
 
 name: port 80 appears open from playbook machine
 local_action: check_tcp state=open port=80
+```
+
+# To be implemented
+```
+name: http is installed
+action: check_rpm state=present name=http
 
 name: connecting to http://example.com/healthcheck returns 'Healthy' and status 200
 local_action: check_http url=http://example.com/healthcheck status=200 message='.*Healthy.*'
+
+name: /usr/local/etc/example exists
+action: check_file state=file name=/usr/local/etc/example
+
+name: /usr/local/bin/bobbins outputs 'hello' and exits with status 0
+action: check_command name=/usr/local/bin/bobbins status=0 stdout='hello'
+
+name: number of cpus is 2
+action: check_equals left={{ansible_processor_count}} right=2
 ```
