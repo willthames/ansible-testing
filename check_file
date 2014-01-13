@@ -88,122 +88,67 @@ def main():
             mode=dict(required=False),
             owner=dict(required=False),
             group=dict(required=False),
+            src=dict(required=False),
             state=dict(choices=['file','directory','absent','hard','link'], default='file'),
-        ),
-        add_file_common_args=True,
-        supports_check_mode=False
+        )
     )
-    params = module.params
-    state = params['state']
-    params['path'] = path = os.path.expanduser(params['path'])
+    state = module.params['state']
+    mode = module.params.get('mode')
+    owner = module.params.get('owner')
+    group = module.params.get('group')
+    src = module.params.get('src')
 
-    module.check_mode = True
-
-    prev_state = 'absent'
+    path = os.path.expanduser(module.params['path'])
 
     if os.path.lexists(path):
         if os.path.islink(path):
-            prev_state = 'link'
+            actual_state = 'link'
         elif os.path.isdir(path):
-            prev_state = 'directory'
+            actual_state = 'directory'
         elif os.stat(path).st_nlink > 1:
-            prev_state = 'hard'
+            actual_state = 'hard'
         else:
             # could be many other things, but defaulting to file
-            prev_state = 'file'
-
-
-    if prev_state is not None and state is None:
-        # set state to current type of file
-        state = prev_state
-    elif state is None:
-        # set default state to file
-        state = 'file'
-
-    # source is both the source of a symlink or an informational passing of the src for a template module
-    # or copy module, even if this module never uses it, it is needed to key off some things
-
-    src = params.get('src', None)
-    if src:
-        src = os.path.expanduser(src)
-
-    if src is not None and os.path.isdir(path) and state not in ["link", "absent"]:
-        if params['original_basename']:
-            basename = params['original_basename']
+            actual_state = 'file'
+    else:
+        if state == 'absent':
+            module.exit_json()
         else:
-            basename = os.path.basename(src)
-        params['path'] = path = os.path.join(path, basename)
+            module.fail_json(msg="%s does not exist" % path)
 
-    file_args = module.load_file_common_arguments(params)
+    if actual_state != 'absent' and state == 'absent':
+        module.fail_json(msg='file or directory is not absent')
 
-    if state in ['link','hard'] and (src is None or path is None):
-        module.fail_json(msg='src and dest are required for checking links')
-    elif path is None:
-        module.fail_json(msg='path is required')
+    file_attrs = file_stat(module.params['path'])
 
-    changed = False
+    if state != actual_state and state != 'absent':
+        module.fail_json(msg="%s is not a %s" % (path, state))
 
-    if prev_state != 'absent' and state == 'absent':
-        module.fail_json(msg='file or diretory is not absent')
+    if mode and file_attrs['mode'] != mode:
+        module.fail_json(msg="%s does not have mode %s" % (path, state))
+    
+    if owner and file_attrs['user'] != owner:
+        module.fail_json(msg="%s is not owned by %s" % (path, owner))
+    
+    if group and file_attrs['group'] != group:
+        module.fail_json(msg="%s does not have group %s" % (path, group))
 
-    if prev_state == 'absent' and state == 'absent':
-        module.exit_json(path=path, changed=False)
+    if state in ['link','hard']:
+        abs_src = os.path.join(os.path.dirname(path), os.path.basename(os.readlink(path)))
+        if not os.path.exists(abs_src):
+            module.fail_json(msg='src file %s does not exist' % src)
 
-    file_attrs = file_stat(params['path'])
-
-    if state == 'file':
-        if prev_state != 'file':
-            module.fail_json(path=path, msg='file (%s) does not exist, use copy or template module to create' % path)
-
-        changed = module.set_file_attributes_if_different(file_args, changed)
-        if changed:
-            module.fail_json(msg='file attributes are different', actual_attrs=file_attrs, expected_attrs=file_args)
-        else:
-            module.exit_json(path=path, changed=False)
-
-    elif state == 'directory':
-        if prev_state == 'absent':
-            module.exit_json(changed=True)
-
-        changed = module.set_directory_attributes_if_different(file_args, changed)
-        if changed:
-            module.fail_json(msg='directory attributes are different', actual_attrs=file_attrs, expected_attrs=file_args)
-        else:
-            module.exit_json(path=path, changed=False)
-
-    elif state in ['link','hard']:
         if state == 'hard':
-            if os.path.isabs(src):
-                abs_src = src
-            else:
+            if not os.path.isabs(src):
                 module.fail_json(msg="absolute paths are required")
 
-            if not os.path.exists(abs_src) and not force:
-                module.fail_json(path=path, src=src, msg='src file does not exist')
-
-        if prev_state == 'absent':
-            changed = True
-            msg = 'link is absent'
-        elif prev_state == 'link':
+        if actual_state == 'link':
             old_src = os.path.join(os.path.dirname(path), os.path.basename(os.readlink(path)))
             if old_src != src:
-                changed = True
-                msg = 'link source (target file) is different from actual'
-        elif prev_state == 'hard':
-            changed = True
-            msg = 'link is actually a hard link'
-        elif prev_state == 'file':
-            if not force:
-                module.fail_json(dest=path, src=src, msg='Cannot link, file exists at destination')
-            changed = True
-            msg = 'link is actually a file'
-        else:
-            module.fail_json(dest=path, src=src, msg='unexpected position reached')
+                module.fail_json(msg="link %s source does not match %s" % (path, old_src))
 
-        if changed:
-            module.fail_json(msg=msg, actual_attrs=file_attrs, expected_attrs=file_args, actual_src=old_src, expected_src=src)
-        else:
-            module.exit_json(path=path, changed=False)
+    module.exit_json()
+    
 
 from ansible.module_utils.basic import *
 main()
