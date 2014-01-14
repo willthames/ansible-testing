@@ -41,6 +41,17 @@ action: check_equals left={{ansible_processor_count}} right=2
 name: /usr/local/etc/example exists
 action: check_file state=file path=/usr/local/etc/example mode=0755 owner=testuser group=testgroup
 
+name: capture results of /usr/local/bin/run_stuff
+action: command /usr/local/bin/run_stuff
+register: run_stuff_results
+
+name: run_stuff exited with status 0
+action: assert condition="{{run_stuff_results.rc}} == 0" failure_msg="run_stuff did not exit with status 0"
+
+# Note that the expansion of run_stuff_results.stdout is quoted here
+name: run_stuff printed Hello
+action: assert condition="'Hello' in '{{run_stuff_results.stdout}}'" failure_msg="run_stuff did not print Hello"
+
 ```
 
 # To be implemented
