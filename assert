@@ -21,20 +21,20 @@
 
 DOCUMENTATION = '''
 ---
-module: test_equals
+module: assert
 version_added: 1.5
-short_description: Compare two values for equality
+short_description: Asserts that a condition is true
 description:
-  - Compare two values for equality
+  - Asserts that a condition is true
 options: 
-  left: 
+  condition: 
     description:
-    - a value to compare
+    - a condition to evaluate
     required: True
     default: null
-  right:
+  failure_msg:
     description:
-    - the other value to compare
+    - failure message to report
     required: True
     default: null
 author: Will Thames
@@ -42,24 +42,28 @@ author: Will Thames
 
 EXAMPLES = '''
 # Check if number of cpus is 2
-test_equals: left="{{ansible_processor_count}}" right=2
+assert: condition="{{ansible_processor_count}}==2" failure_msg="Number of cpus is {{ansible_processor_count}}, expecting 2"
 '''
+
+from ast import literal_eval
 
 def main():
     module = AnsibleModule(
         argument_spec = dict(
-            left=dict(type='str', required=True, default=None),
-            right=dict(type='str', required=True, default=None),
-        ),
-        supports_check_mode=True
+            condition=dict(type='str', required=True, default=None),
+            failure_msg=dict(type='str', required=True, default=None),
+        )
     )
-    left = module.params.get('left')
-    right = module.params.get('right')
+    condition = module.params.get('condition')
+    failure_msg = module.params.get('failure_msg')
 
-    if left == right: 
+    # eval is evil but ansible has the same privileges as the person running it
+    # so it's hardly untrusted input. ast.literal_eval does not work for 
+    # ast.Compare objects - i.e. pretty much all expected uses of this module!
+    if eval(condition, {}): 
         module.exit_json()
     else:
-        module.fail_json(msg="Values %s and %s do not match" % (left, right))
+        module.fail_json(msg=failure_msg)
 
 from ansible.module_utils.basic import *
 
