@@ -36,7 +36,7 @@ name: port 80 appears open from playbook machine
 local_action: test_tcp state=open port=80
 
 name: number of cpus is 2
-action: test_equals left={{ansible_processor_count}} right=2
+action: assert condition="{{ansible_processor_count}} == 2" failure_msg="Expecting 2 CPUs, found {{ansible_processor_count}}"
 
 name: /usr/local/etc/example exists
 action: test_file state=file path=/usr/local/etc/example mode=0755 owner=testuser group=testgroup
