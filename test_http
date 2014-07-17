@@ -1,0 +1,95 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2014, Will Thames <will@thames.id.au>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+
+DOCUMENTATION = '''
+---
+module: test_http
+version_added: 1.7
+short_description: Check the results of an http connection
+description:
+  - Check that the results of an HTTP request match the expected results
+options:
+  url:
+    description:
+    - URL to connect to
+    required: True
+    default: null
+  status:
+    description:
+    - expected HTTP status
+    required: False
+    default: null
+  regex:
+    description:
+    - content to match in the response
+    default: null
+    required: False
+  timeout:
+    description:
+      - duration of timeout
+    required: false
+    default: 10
+    choices: ['yes', 'no']
+author: Will Thames
+
+'''
+
+EXAMPLES = '''
+# Check if HTTP response contains 'Hello'
+test_http: url=http://example.com/helloworld regex='.*Hello.*'
+
+# Check if HTTP response code is 200
+test_http: url=http://example.com/helloworld status=200
+'''
+def main():
+    argument_spec = url_argument_spec()
+    argument_spec.update(dict(
+        status=dict(required=False, type='int', default=None),
+        regex=dict(required=False, default=None),
+        timeout=dict(required=False, type='int', default=10),
+    ))
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True
+    )
+    url = module.params.get('url')
+    status = module.params.get('status')
+    regex = module.params.get('regex')
+    timeout = module.params.get('timeout')
+
+    (r, info) = fetch_url(module, url, timeout=timeout)
+
+    response = r.read()
+    if status and info['status'] != status:
+        module.fail_json(msg='Status %s does not match expected status %s' % (info['status'], status))
+
+    truncate = (response[:97] + '...') if len(response) > 100 else response
+    if regex:
+        if not re.search(regex, response):
+            module.fail_json(msg='Response %s did not match the regex %s' % (truncate, regex))
+
+    module.exit_json(info=info, response=truncate)
+
+from ansible.module_utils.basic import *
+from ansible.module_utils.urls import *
+
+main()
+
