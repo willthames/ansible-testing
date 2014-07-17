@@ -37,9 +37,9 @@ local_action: test_http url=http://example.com/helloworld status=200 regex='.*He
 
 # See also
 
-[assert module](http://docs.ansible.com/assert_module.html)
-[stat module](http://docs.ansible.com/stat_module.html)
-[Testing Strategies](http://docs.ansible.com/test_strategies.html)
+* [assert module](http://docs.ansible.com/assert_module.html)
+* [stat module](http://docs.ansible.com/stat_module.html)
+* [Testing Strategies](http://docs.ansible.com/test_strategies.html)
 
 ## Example
 
