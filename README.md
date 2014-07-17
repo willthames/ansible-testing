@@ -40,3 +40,19 @@ local_action: test_http url=http://example.com/helloworld status=200 regex='.*He
 [assert module](http://docs.ansible.com/assert_module.html)
 [stat module](http://docs.ansible.com/stat_module.html)
 [Testing Strategies](http://docs.ansible.com/test_strategies.html)
+
+## Example
+
+```
+name: run hello command
+action: command echo -n hello
+register: hello_cmd
+
+name: check results of hello command
+assert:
+  that:
+    - "hello_cmd.stdout == 'hello'"
+    - "hello_cmd.rc == 0"
+```
+
+
