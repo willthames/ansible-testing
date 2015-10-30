@@ -28,7 +28,7 @@ test_process:
   - app.py
 
 name: port 80 appears open from playbook machine
-local_action: test_tcp state=open port=80
+local_action: test_tcp host=example.com state=open port=80
 
 name: check HTTP response has 200 status and contains Hello
 local_action: test_http url=http://example.com/helloworld status=200 regex='.*Hello.*'
